@@ -59,6 +59,7 @@ export class VariableResolverService {
      */
     async resolve<T>(value: T, options: VariableResolveOptions = {}): Promise<T> {
         const context = new VariableResolverService.Context(this.variableRegistry, options);
+        console.error('+++++++++++++++ variable resolver service +++ context ', context);
         const resolved = await this.doResolve(value, context);
         return resolved as any;
     }
