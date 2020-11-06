@@ -30,9 +30,9 @@ export class WebSocketChannel implements IWebSocket {
     constructor(
         readonly id: number,
         protected readonly doSend: (content: string) => void,
-        readonly index: number,
+        readonly index: number = 1
         // readonly tracerid: any
-    ) {  }
+    ) { }
 
     dispose(): void {
         this.toDispose.dispose();
@@ -44,7 +44,7 @@ export class WebSocketChannel implements IWebSocket {
         }
     }
 
-       handleMessage(message: WebSocketChannel.Message): void {
+    handleMessage(message: WebSocketChannel.Message): void {
         if (message.kind === 'ready') {
             this.fireOpen();
         } else if (message.kind === 'data') {

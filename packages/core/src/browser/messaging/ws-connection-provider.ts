@@ -56,8 +56,6 @@ export class WebSocketConnectionProvider extends AbstractConnectionProvider<WebS
     protected readonly channels = new Map<number, WebSocketChannel>();
     tracerIds = new Map();
     channelIds = new Map<number, Number>();
-    protected readonly onIncomingMessageActivityEmitter: Emitter<void> = new Emitter();
-    public onIncomingMessageActivity: Event<void> = this.onIncomingMessageActivityEmitter.event;
 
     constructor() {
         super();
@@ -71,8 +69,6 @@ export class WebSocketConnectionProvider extends AbstractConnectionProvider<WebS
         };
         socket.onmessage = ({ data }) => {
             this.handleIncomingRawMessage(data);
-            const message: WebSocketChannel.Message = JSON.parse(data);
-            const channel = this.channels.get(message.id);
             const msg = JSON.parse(data.toString());
             // var text = '{ "name":"John", "birth":"1986-12-14", "city":"New York"}';
             if (msg.content) {
@@ -170,7 +166,7 @@ export class WebSocketConnectionProvider extends AbstractConnectionProvider<WebS
     /**
      * Creates a web socket for the given url
      */
-    protected createWebSocket(url: string): WebSocket {
+    protected createWebSocket(url: string): ReconnectingWebSocket {
         return new ReconnectingWebSocket(url, undefined, {
             maxReconnectionDelay: 10000,
             minReconnectionDelay: 1000,
