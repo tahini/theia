@@ -15,6 +15,7 @@
  ********************************************************************************/
 
 import { inject, injectable, named } from 'inversify';
+import { Event, Emitter } from '../../common';
 import { CorePreferences } from '../core-preferences';
 import { ContributionProvider } from '../../common/contribution-provider';
 import { FrontendApplicationContribution, FrontendApplication } from '../frontend-application';
@@ -24,6 +25,7 @@ import { WindowService } from './window-service';
 export class DefaultWindowService implements WindowService, FrontendApplicationContribution {
 
     protected frontendApplication: FrontendApplication;
+    protected onUnloadEmitter = new Emitter<void>();
 
     @inject(CorePreferences)
     protected readonly corePreferences: CorePreferences;
@@ -38,7 +40,9 @@ export class DefaultWindowService implements WindowService, FrontendApplicationC
             if (!this.canUnload()) {
                 return this.preventUnload(event);
             }
+            this.onUnloadEmitter.fire();
         });
+        this.registerUnloadListener();
     }
 
     openNewWindow(url: string): undefined {
@@ -59,6 +63,14 @@ export class DefaultWindowService implements WindowService, FrontendApplicationC
             }
         }
         return confirmExit !== 'always';
+    }
+
+    protected registerUnloadListener(): void {
+        window.addEventListener('unload', () => this.onUnloadEmitter.fire());
+    }
+
+    get onUnload(): Event<void> {
+        return this.onUnloadEmitter.event;
     }
 
     /**
