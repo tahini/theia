@@ -13,13 +13,13 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
-const {Annotation, Tracer, ExplicitContext} = require('zipkin');
+const { Annotation, Tracer, ExplicitContext } = require('zipkin');
 // const CLSContext = require('zipkin-context-cls');
-const {recorder} = require('recorder/recorder');
+const { recorder } = require('recorder/recorder');
 const ctxImpl = new ExplicitContext();
 // const xtxImpl = new zipkin.ExplicitContext();
 const localServiceName = 'RPC';
-const tracer = new Tracer({ctxImpl, recorder: recorder(localServiceName), localServiceName});
+const tracer = new Tracer({ ctxImpl, recorder: recorder(localServiceName), localServiceName });
 
 export class RpcTracer {
     tracerIds = new Map();
@@ -27,42 +27,44 @@ export class RpcTracer {
 
     constructor() {
     }
+
     // eslint-disable-next-line
-    public log(message: any): void  {
-        if (message.type = 'receive-request') {
+    public log(data: any): void {
+        const message = typeof data === 'string' ? { message: { method: data } } : data;
+        if (message.type === 'receive-request') {
             tracer.setId(tracer.createChildId());
             const traceId = tracer.id;
             tracer.scoped(async () => {
                 tracer.recordServiceName(localServiceName);
                 if (message.message.id) {
-                tracer.recordBinary('payload.id', message.message.id);
-                tracer.recordBinary('spanId', tracer.id.spanId);
-                tracer.recordBinary('dir', 'rpc');
-                tracer.recordBinary('channel.id', '');
-                tracer.recordBinary('method', message.message.method);
-                tracer.recordAnnotation(new Annotation.ClientSend());
-            }
+                    tracer.recordBinary('payload.id', message.message.id);
+                    tracer.recordBinary('spanId', tracer.id.spanId);
+                    tracer.recordBinary('dir', 'rpc');
+                    tracer.recordBinary('channel.id', '');
+                    tracer.recordBinary('method', message.message.method);
+                    tracer.recordAnnotation(new Annotation.ClientSend());
+                }
             });
 
             this.tracerIds.set(message.message.id, traceId);
         }
 
-        if (message.type = 'send-response') {
+        if (message.type === 'send-response') {
             const tracerid = this.tracerIds.get(message.message.id);
             if (tracerid) {
-            tracer.setId(tracerid);
-            tracer.scoped(async () => {
-                // tracer.recordServiceName(localServiceName);
-                // tracer.recordBinary('payload.id', message.message.id);
-                // tracer.recordBinary('spanId', tracer.id.spanId);
-                // tracer.recordBinary('dir', 'RPCServer');
-                // tracer.recordBinary('method', message.message.method);
-                tracer.recordAnnotation(new Annotation.ClientRecv());
+                tracer.setId(tracerid);
+                tracer.scoped(async () => {
+                    // tracer.recordServiceName(localServiceName);
+                    // tracer.recordBinary('payload.id', message.message.id);
+                    // tracer.recordBinary('spanId', tracer.id.spanId);
+                    // tracer.recordBinary('dir', 'RPCServer');
+                    // tracer.recordBinary('method', message.message.method);
+                    tracer.recordAnnotation(new Annotation.ClientRecv());
 
-            });
-            this.tracerIds.delete(message.message.id);
-        }
+                });
+                this.tracerIds.delete(message.message.id);
+            }
         }
 
     }
-  }
+}

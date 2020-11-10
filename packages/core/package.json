@@ -52,7 +52,9 @@
     "vscode-uri": "^2.1.1",
     "vscode-ws-jsonrpc": "^0.2.0",
     "ws": "^7.1.2",
-    "yargs": "^11.1.0"
+    "yargs": "^11.1.0",
+    "zipkin": "^0.22.0",
+    "zipkin-transport-http": "^0.22.0"
   },
   "publishConfig": {
     "access": "public"

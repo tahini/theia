@@ -3000,7 +3000,7 @@ base64-arraybuffer@^0.1.5:
   resolved "https://registry.yarnpkg.com/base64-arraybuffer/-/base64-arraybuffer-0.1.5.tgz#73926771923b5a19747ad666aa5cd4bf9c6e9ce8"
   integrity sha1-c5JncZI7Whl0etZmqlzUv5xunOg=
 
-base64-js@^1.0.2, base64-js@^1.3.1:
+base64-js@^1.0.2, base64-js@^1.1.2, base64-js@^1.3.1:
   version "1.3.1"
   resolved "https://registry.yarnpkg.com/base64-js/-/base64-js-1.3.1.tgz#58ece8cb75dd07e71ed08c736abc5fac4dbf8df1"
   integrity sha512-mLQ4i2QO1ytvGWFWmcngKO//JXAQueZvwEKtjgQFM4jIK0kU+ytMfplL8j+n5mspOfjHwoAg+9yhb7BwAHm36g==
@@ -14318,3 +14318,18 @@ yeoman-generator@^4.8.2:
   optionalDependencies:
     grouped-queue "^1.1.0"
     yeoman-environment "^2.9.5"
+
+zipkin-transport-http@^0.22.0:
+  version "0.22.0"
+  resolved "https://registry.yarnpkg.com/zipkin-transport-http/-/zipkin-transport-http-0.22.0.tgz#199567950efd5db4dc4cbd4de580597626232884"
+  integrity sha512-bjM2fm/hurseBuvpyB8mYCBBGOz3gc2f9KUSQl71LGxmgYcUeXvDHJyE9MgzWMhl+3HcD8l5nNn6OmdX63he+g==
+  dependencies:
+    zipkin "^0.22.0"
+
+zipkin@^0.22.0:
+  version "0.22.0"
+  resolved "https://registry.yarnpkg.com/zipkin/-/zipkin-0.22.0.tgz#b8a086f801f809d5ef193c84bd8c6d77efc27831"
+  integrity sha512-SZgorBAvywnj5R26mqsFP+2MRUsBXGg0B8GLRLw9R0FeE4alMUAfhXYvzeAt2+MvkXne9QdQyziuqO5oXNQ0Sg==
+  dependencies:
+    base64-js "^1.1.2"
+    is-promise "^2.1.0"
