@@ -136,17 +136,18 @@ export class WebSocketConnectionProvider extends AbstractConnectionProvider<WebS
                     // console.log(json2);
                     tracer.scoped(async () => {
                         tracer.recordServiceName(localServiceName);
-                        tracer.recordBinary('payload.id', json2.id);
+                        if (json2.id) {
+                            tracer.recordBinary('payload.id', json2.id);
+                        }
                         tracer.recordBinary('channel.id', id);
                         tracer.recordBinary('spanId', tracer.id.spanId);
                         tracer.recordBinary('dir', 'cl');
-                        tracer.recordBinary('method', json2.method);
+                        tracer.recordBinary('operationName', (json2.method ? json2.method : 'unknown'));
                         tracer.recordAnnotation(new Annotation.ClientSend());
-
+                        this.socket.send(newcontent);
+                        this.channelIds.set(json2.id, id);
+                        this.tracerIds.set(json2.id, traceId);
                     });
-                    this.socket.send(newcontent);
-                    this.channelIds.set(json2.id, id);
-                    this.tracerIds.set(json2.id, traceId);
                 } else {
                     this.socket.send(content);
                 }

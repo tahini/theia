@@ -41,7 +41,7 @@ export class RpcTracer {
                     tracer.recordBinary('spanId', tracer.id.spanId);
                     tracer.recordBinary('dir', 'rpc');
                     tracer.recordBinary('channel.id', '');
-                    tracer.recordBinary('method', message.message.method);
+                    tracer.recordBinary('operationName', message.message.method);
                     tracer.recordAnnotation(new Annotation.ClientSend());
                 }
             });
