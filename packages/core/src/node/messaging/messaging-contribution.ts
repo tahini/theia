@@ -30,7 +30,7 @@ import { BackendApplicationContribution } from '../backend-application';
 import { MessagingService, WebSocketChannelConnection } from './messaging-service';
 import { ConsoleLogger } from './logger';
 import { ConnectionContainerModule } from './connection-container-module';
-const { Annotation, Tracer } = require('zipkin');
+const { Annotation, Tracer, TraceId, option: { Some } } = require('zipkin');
 const CLSContext = require('zipkin-context-cls');
 const { recorder } = require('recorder/recorder');
 const ctxImpl = new CLSContext('zipkin');
@@ -138,6 +138,27 @@ export class MessagingContribution implements BackendApplicationContribution, Me
         }
     }
 
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    private _createIdFromHeaders(readHeader: any): any {
+        const container = readHeader;
+        const traceId = container.traceId;
+        const spanId = container.spanId;
+        const sampled = container.sampled;
+        const flags = container.flags;
+        if (traceId !== undefined && spanId !== undefined && sampled !== undefined && flags !== undefined) {
+            console.log('found data');
+            const clientId = new TraceId({
+                traceId: traceId,
+                spanId: spanId,
+                debug: flags === 1,
+                sampled: new Some(sampled),
+            });
+            return tracer.createChildId(clientId);
+        }
+        console.log('no data', JSON.stringify(readHeader));
+        return tracer.createRootId();
+    }
+
     protected handleChannels(socket: ws): void {
         const channelHandlers = this.getConnectionChannelHandlers(socket);
         const channels = new Map<number, WebSocketChannel>();
@@ -145,12 +166,25 @@ export class MessagingContribution implements BackendApplicationContribution, Me
         socket.on('message', data => {
             try {
                 const message: WebSocketChannel.Message = JSON.parse(data.toString());
+                /* eslint-disable @typescript-eslint/no-explicit-any */
+                const traceId = this._createIdFromHeaders(message as any);
+                tracer.setId(traceId);
                 if (message.kind === 'open') {
                     const { id, path } = message;
 
                     const channel = this.createChannel(id, socket);
 
                     if (channelHandlers.route(path, channel)) {
+                        tracer.scoped(() => {
+                            tracer.recordServiceName(localServiceName);
+                            tracer.recordBinary('Channel.dir', 'err');
+                            tracer.recordBinary('code', '601');
+                            tracer.recordBinary('Channel.pipe', id);
+                            tracer.recordBinary('spanId', tracer.id.spanId);
+                            tracer.recordBinary('path', path);
+                            tracer.recordAnnotation(new Annotation.ServerRecv());
+                            console.error('Cannot find a service for the path: ' + path);
+                        });
                         channel.ready();
                         console.debug(`Opening channel for service path '${path}'. [ID: ${id}]`);
                         channels.set(id, channel);
@@ -166,10 +200,11 @@ export class MessagingContribution implements BackendApplicationContribution, Me
                             tracer.recordBinary('Channel.pipe', id);
                             tracer.recordBinary('spanId', tracer.id.spanId);
                             tracer.recordBinary('path', path);
-                            tracer.recordAnnotation(new Annotation.ClientSend());
+                            tracer.recordAnnotation(new Annotation.ServerRecv());
                             console.error('Cannot find a service for the path: ' + path);
                         });
                     }
+                    this.tracerIds.set(id, traceId);
                 } else {
                     const { id } = message;
                     // console.log(msg);
@@ -191,21 +226,19 @@ export class MessagingContribution implements BackendApplicationContribution, Me
                         // });
                         // tracer.setId(idtrace);
                         // tracer.id.parentId = z.spanId;
-                        tracer.setId(tracer.createChildId());
 
                         // tracer.setId(tracer.createChildId());
-                        const traceId = tracer.id;
                         tracer.scoped(async () => {
                             channel.handleMessage(message);
                             tracer.recordServiceName(localServiceName);
                             tracer.recordBinary('payload.id', z.id);
                             tracer.recordBinary('channel.id', id);
-                            tracer.recordBinary('operationName', (z.method ? z.method : message.kind === 'data' ? message.content : message.kind));
+                            tracer.recordRpc((z.method ? z.method : message.kind === 'data' ? message.content : message.kind));
                             tracer.recordBinary('spanId', tracer.id.spanId);
                             tracer.recordBinary('dir', 'srv');
                             // tracer.recordBinary('path', path);
 
-                            tracer.recordAnnotation(new Annotation.ClientSend());
+                            tracer.recordAnnotation(new Annotation.ServerRecv());
                         });
                         this.tracerIds.set(z.id, traceId);
                         this.channelIds.set(z.id, id);
@@ -220,7 +253,7 @@ export class MessagingContribution implements BackendApplicationContribution, Me
                             tracer.recordBinary('Channel.pipe', id);
                             tracer.recordBinary('spanId', tracer.id.spanId);
                             tracer.recordBinary('path', 'null');
-                            tracer.recordAnnotation(new Annotation.ClientSend());
+                            tracer.recordAnnotation(new Annotation.ServerRecv());
                             console.error('The ws channel does not exist', id);
                         });
 
@@ -235,7 +268,7 @@ export class MessagingContribution implements BackendApplicationContribution, Me
                     tracer.recordBinary('Channel.pipe', message.id);
                     tracer.recordBinary('spanId', tracer.id.spanId);
                     tracer.recordBinary('path', 'null');
-                    tracer.recordAnnotation(new Annotation.ClientSend());
+                    tracer.recordAnnotation(new Annotation.ServerRecv());
                     console.error('Failed to handle message', { error, data });
                 });
             }
@@ -302,7 +335,7 @@ export class MessagingContribution implements BackendApplicationContribution, Me
                                 // tracer.recordBinary('channel.id', id);
                                 // tracer.recordBinary('spanId', tracer.id.spanId);
                                 // tracer.recordBinary('dir', 'rcv');
-                                tracer.recordAnnotation(new Annotation.ClientRecv());
+                                tracer.recordAnnotation(new Annotation.ServerSend());
                             });
                             this.channelIds.delete(json2.id);
                             this.tracerIds.delete(json2.id);

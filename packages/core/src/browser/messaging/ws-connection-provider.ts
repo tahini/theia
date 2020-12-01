@@ -82,6 +82,7 @@ export class WebSocketConnectionProvider extends AbstractConnectionProvider<WebS
                 // const cont = JSON.parse(msg);
                 // console.log(obj.id);
                 const tr = this.tracerIds.get(obj.id);
+
                 if (tr) {
                     // console.log(json2.id);
                     tracer.setId(tr);
@@ -122,17 +123,16 @@ export class WebSocketConnectionProvider extends AbstractConnectionProvider<WebS
         return new WebSocketChannel(id, content => {
             if (this.socket.readyState < WebSocket.CLOSING) {
                 const json = JSON.parse(content);
-                tracer.setId(tracer.createChildId());
-                const traceId = tracer.id;
+                const childId = tracer.createChildId();
+                tracer.setId(childId);
+                json['traceId'] = childId.traceId;
+                json['spanId'] = childId.spanId;
+                json['sampled'] = childId.sampled;
+                json['flags'] = childId.flags;
+                const newcontent = JSON.stringify(json);
                 // console.log(json);
                 if (json.content) {
                     const json2 = JSON.parse(json.content);
-                    json2['parentId'] = tracer.id.traceId;
-                    json2['spanId'] = tracer.id.spanId;
-                    json2['sampled'] = tracer.id.sampled;
-                    json2['flags'] = tracer.id.flags;
-                    json.content = JSON.stringify(json2);
-                    const newcontent = JSON.stringify(json);
                     // console.log(json2);
                     tracer.scoped(async () => {
                         tracer.recordServiceName(localServiceName);
@@ -142,14 +142,23 @@ export class WebSocketConnectionProvider extends AbstractConnectionProvider<WebS
                         tracer.recordBinary('channel.id', id);
                         tracer.recordBinary('spanId', tracer.id.spanId);
                         tracer.recordBinary('dir', 'cl');
-                        tracer.recordBinary('operationName', (json2.method ? json2.method : 'unknown'));
+                        tracer.recordRpc((json2.method ? json2.method : 'no se'));
                         tracer.recordAnnotation(new Annotation.ClientSend());
                         this.socket.send(newcontent);
                         this.channelIds.set(json2.id, id);
-                        this.tracerIds.set(json2.id, traceId);
+                        this.tracerIds.set(json2.id, childId);
                     });
                 } else {
-                    this.socket.send(content);
+                    tracer.scoped(async () => {
+                        tracer.recordServiceName(localServiceName);
+                        tracer.recordBinary('channel.id', id);
+                        tracer.recordBinary('spanId', tracer.id.spanId);
+                        tracer.recordBinary('dir', 'cl');
+                        tracer.recordRpc(json.kind);
+                        tracer.recordAnnotation(new Annotation.ClientSend());
+                        this.socket.send(content);
+                    });
+
                 }
 
             }
